@@ -58,7 +58,7 @@ public class LoginFrame extends JFrame {
         tarjeta.setLayout(new BoxLayout(tarjeta, BoxLayout.Y_AXIS));
         tarjeta.setBorder(new EmptyBorder(30, 36, 26, 36));
 
-        // --- Logo / Emblema institucional vectorial limpio centrado ---
+        // --- Logo / Emblema institucional oficial (Escudo BD Azul Cobalto + Reloj Digital Gris Metálico) ---
         JPanel panelLogo = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -67,44 +67,71 @@ public class LoginFrame extends JFrame {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 int cx = getWidth() / 2;
                 int cy = getHeight() / 2;
-                // Círculo azul institucional
-                g2.setColor(new Color(0x1E, 0x40, 0xAF));
-                g2.fillOval(cx - 24, cy - 24, 48, 48);
-                // Dibujo de libro abierto blanco
-                g2.setColor(Color.WHITE);
-                g2.setStroke(new BasicStroke(2.2f));
-                g2.drawArc(cx - 14, cy - 8, 14, 14, 0, 180);
-                g2.drawArc(cx, cy - 8, 14, 14, 0, 180);
-                g2.drawLine(cx, cy - 8, cx, cy + 8);
-                g2.drawLine(cx - 14, cy - 1, cx - 14, cy + 7);
-                g2.drawLine(cx + 14, cy - 1, cx + 14, cy + 7);
-                g2.drawLine(cx - 14, cy + 7, cx, cy + 8);
-                g2.drawLine(cx + 14, cy + 7, cx, cy + 8);
+
+                // 1. Escudo de base de datos en Azul Cobalto (#0047AB)
+                g2.setColor(new Color(0x00, 0x47, 0xAB));
+                Polygon escudo = new Polygon();
+                escudo.addPoint(cx - 24, cy - 22);
+                escudo.addPoint(cx + 24, cy - 22);
+                escudo.addPoint(cx + 24, cy + 4);
+                escudo.addPoint(cx, cy + 25);
+                escudo.addPoint(cx - 24, cy + 4);
+                g2.fill(escudo);
+
+                // Capas sutiles de cilindro relacional dentro del escudo
+                g2.setColor(new Color(255, 255, 255, 55));
+                g2.setStroke(new BasicStroke(1.2f));
+                g2.drawRoundRect(cx - 16, cy - 18, 32, 6, 4, 4);
+                g2.drawRoundRect(cx - 16, cy - 10, 32, 6, 4, 4);
+
+                // 2. Reloj digital sobre el escudo en Gris Metálico (#64748B)
+                g2.setColor(new Color(0x47, 0x55, 0x69));
+                g2.fillRoundRect(cx - 19, cy - 2, 38, 18, 6, 6);
+                g2.setColor(new Color(0x94, 0xA3, 0xB8));
+                g2.setStroke(new BasicStroke(1.2f));
+                g2.drawRoundRect(cx - 19, cy - 2, 38, 18, 6, 6);
+
+                // Pantalla digital interna LCD
+                g2.setColor(new Color(0x0F, 0x17, 0x2A));
+                g2.fillRoundRect(cx - 16, cy + 1, 32, 12, 4, 4);
+
+                // Dígitos digitales nítidos (08:00)
+                g2.setColor(new Color(0x38, 0xBD, 0xF8));
+                g2.setFont(new Font("Monospaced", Font.BOLD, 9));
+                g2.drawString("08:00", cx - 14, cy + 10);
+
                 g2.dispose();
             }
         };
         panelLogo.setOpaque(false);
-        panelLogo.setPreferredSize(new Dimension(400, 52));
-        panelLogo.setMaximumSize(new Dimension(400, 52));
+        panelLogo.setPreferredSize(new Dimension(400, 60));
+        panelLogo.setMaximumSize(new Dimension(400, 60));
         panelLogo.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // --- Textos de Título y Subtítulo Centrados ---
+        // --- Textos de Título, Slogan y Subtítulo Centrados ---
         JLabel titulo = new JLabel("Control de Asistencia", SwingConstants.CENTER);
         titulo.setFont(new Font("Segoe UI", Font.BOLD, 22));
         titulo.setForeground(new Color(0x0F, 0x17, 0x2A));
         titulo.setAlignmentX(Component.CENTER_ALIGNMENT);
 
+        JLabel slogan = new JLabel("\"Precisión en tiempo real, control que transforma tu empresa.\"", SwingConstants.CENTER);
+        slogan.setFont(new Font("Segoe UI", Font.ITALIC, 11));
+        slogan.setForeground(new Color(0x00, 0x47, 0xAB));
+        slogan.setAlignmentX(Component.CENTER_ALIGNMENT);
+
         JLabel subtitulo = new JLabel("Portal de Acceso para Docentes", SwingConstants.CENTER);
-        subtitulo.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        subtitulo.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         subtitulo.setForeground(new Color(0x47, 0x55, 0x69));
         subtitulo.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         tarjeta.add(panelLogo);
-        tarjeta.add(Box.createVerticalStrut(8));
+        tarjeta.add(Box.createVerticalStrut(6));
         tarjeta.add(titulo);
+        tarjeta.add(Box.createVerticalStrut(2));
+        tarjeta.add(slogan);
         tarjeta.add(Box.createVerticalStrut(4));
         tarjeta.add(subtitulo);
-        tarjeta.add(Box.createVerticalStrut(22));
+        tarjeta.add(Box.createVerticalStrut(18));
 
         // --- Campo Usuario ---
         JLabel lblUsuario = new JLabel("Usuario");

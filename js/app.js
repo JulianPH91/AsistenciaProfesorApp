@@ -6,8 +6,6 @@
  */
 
 // --- Configuración de Base de Datos ---
-// Si deseas dejar configurada tu base de datos fija de Firebase, coloca aquí la URL:
-// Ejemplo: const FIREBASE_DB_URL_POR_DEFECTO = "https://tu-proyecto-rtdb.firebaseio.com";
 const FIREBASE_DB_URL_POR_DEFECTO = "";
 
 const DB_KEYS = {
@@ -16,7 +14,8 @@ const DB_KEYS = {
   CURSOS: 'asistencia_cursos',
   ESTUDIANTES: 'asistencia_estudiantes',
   ASISTENCIAS: 'asistencia_registros',
-  SESSION: 'asistencia_sesion_activa'
+  SESSION: 'asistencia_sesion_activa',
+  NOTAS: 'asistencia_notas'
 };
 
 // Estado global en memoria
@@ -27,7 +26,8 @@ let estadoLocal = {
   profesores: [],
   cursos: [],
   estudiantes: [],
-  asistencias: []
+  asistencias: [],
+  notas: []
 };
 
 let usuarioActual = null;
@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await inicializarConexionNube();
   verificarSesion();
   configurarEventos();
+  setInterval(actualizarFechaHora, 1000);
 });
 
 function inicializarDatosPorDefecto() {
@@ -49,7 +50,13 @@ function inicializarDatosPorDefecto() {
       nombre_completo: "Carlos Andrés Pérez",
       usuario: "profesor1",
       contrasena: "123456",
-      correo: "carlos.perez@institucion.edu.co"
+      correo: "carlos.perez@institucion.edu.co",
+      telefono: "+57 300 123 4567",
+      departamento: "Ciencias y Tecnología",
+      especialidad: "Matemáticas y Física",
+      titulo: "Licenciatura en Matemáticas",
+      bio: "Docente con más de 10 años de experiencia en educación secundaria...",
+      horario: "Lunes a Viernes, 7:00 AM - 3:00 PM"
     }
   ];
 
@@ -73,24 +80,26 @@ function inicializarDatosPorDefecto() {
     { id_asistencia: 3, id_estudiante: 3, id_curso: 1, id_profesor: 1, fecha: hoy, estado: "PRESENTE", observacion: "" }
   ];
 
-  if (!localStorage.getItem(DB_KEYS.PROFESORES)) {
-    localStorage.setItem(DB_KEYS.PROFESORES, JSON.stringify(profesoresIniciales));
-  }
-  if (!localStorage.getItem(DB_KEYS.CURSOS)) {
-    localStorage.setItem(DB_KEYS.CURSOS, JSON.stringify(cursosIniciales));
-  }
-  if (!localStorage.getItem(DB_KEYS.ESTUDIANTES)) {
-    localStorage.setItem(DB_KEYS.ESTUDIANTES, JSON.stringify(estudiantesIniciales));
-  }
-  if (!localStorage.getItem(DB_KEYS.ASISTENCIAS)) {
-    localStorage.setItem(DB_KEYS.ASISTENCIAS, JSON.stringify(asistenciasIniciales));
-  }
+  const notasIniciales = [
+    { id_nota: 1, id_estudiante: 1, id_curso: 1, periodo: 1, nota1: 4.5, nota2: 3.8, nota3: 4.2, nota4: 4.0, promedio: 4.13, year: 2026 },
+    { id_nota: 2, id_estudiante: 2, id_curso: 1, periodo: 1, nota1: 3.0, nota2: 2.8, nota3: 3.5, nota4: 3.2, promedio: 3.13, year: 2026 },
+    { id_nota: 3, id_estudiante: 3, id_curso: 1, periodo: 1, nota1: 4.8, nota2: 4.9, nota3: 5.0, nota4: 4.7, promedio: 4.85, year: 2026 },
+    { id_nota: 4, id_estudiante: 4, id_curso: 2, periodo: 1, nota1: 3.5, nota2: 3.0, nota3: 3.8, nota4: 3.3, promedio: 3.40, year: 2026 },
+    { id_nota: 5, id_estudiante: 5, id_curso: 2, periodo: 1, nota1: 2.5, nota2: 2.0, nota3: 2.8, nota4: 2.3, promedio: 2.40, year: 2026 }
+  ];
+
+  if (!localStorage.getItem(DB_KEYS.PROFESORES)) localStorage.setItem(DB_KEYS.PROFESORES, JSON.stringify(profesoresIniciales));
+  if (!localStorage.getItem(DB_KEYS.CURSOS)) localStorage.setItem(DB_KEYS.CURSOS, JSON.stringify(cursosIniciales));
+  if (!localStorage.getItem(DB_KEYS.ESTUDIANTES)) localStorage.setItem(DB_KEYS.ESTUDIANTES, JSON.stringify(estudiantesIniciales));
+  if (!localStorage.getItem(DB_KEYS.ASISTENCIAS)) localStorage.setItem(DB_KEYS.ASISTENCIAS, JSON.stringify(asistenciasIniciales));
+  if (!localStorage.getItem(DB_KEYS.NOTAS)) localStorage.setItem(DB_KEYS.NOTAS, JSON.stringify(notasIniciales));
 
   // Cargar estado local
   estadoLocal.profesores = JSON.parse(localStorage.getItem(DB_KEYS.PROFESORES));
   estadoLocal.cursos = JSON.parse(localStorage.getItem(DB_KEYS.CURSOS));
   estadoLocal.estudiantes = JSON.parse(localStorage.getItem(DB_KEYS.ESTUDIANTES));
   estadoLocal.asistencias = JSON.parse(localStorage.getItem(DB_KEYS.ASISTENCIAS));
+  estadoLocal.notas = JSON.parse(localStorage.getItem(DB_KEYS.NOTAS));
 }
 
 // ==========================================================================
@@ -120,12 +129,14 @@ async function inicializarConexionNube() {
           if (data.cursos) estadoLocal.cursos = Object.values(data.cursos);
           if (data.estudiantes) estadoLocal.estudiantes = Object.values(data.estudiantes);
           if (data.asistencias) estadoLocal.asistencias = Object.values(data.asistencias);
+          if (data.notas) estadoLocal.notas = Object.values(data.notas);
 
           // Guardar copia de respaldo en LocalStorage
           localStorage.setItem(DB_KEYS.PROFESORES, JSON.stringify(estadoLocal.profesores));
           localStorage.setItem(DB_KEYS.CURSOS, JSON.stringify(estadoLocal.cursos));
           localStorage.setItem(DB_KEYS.ESTUDIANTES, JSON.stringify(estadoLocal.estudiantes));
           localStorage.setItem(DB_KEYS.ASISTENCIAS, JSON.stringify(estadoLocal.asistencias));
+          localStorage.setItem(DB_KEYS.NOTAS, JSON.stringify(estadoLocal.notas));
 
           // Actualizar vista activa en tiempo real
           actualizarModuloActivo();
@@ -167,7 +178,8 @@ function sincronizarTodoANube() {
       profesores: estadoLocal.profesores,
       cursos: estadoLocal.cursos,
       estudiantes: estadoLocal.estudiantes,
-      asistencias: estadoLocal.asistencias
+      asistencias: estadoLocal.asistencias,
+      notas: estadoLocal.notas
     });
   }
 }
@@ -194,6 +206,14 @@ function guardarAsistencias(asistencias) {
   localStorage.setItem(DB_KEYS.ASISTENCIAS, JSON.stringify(asistencias));
   if (modoNubeActivo && dbFirebase) {
     dbFirebase.ref('asistencia_db/asistencias').set(asistencias);
+  }
+}
+
+function guardarNotas(notas) {
+  estadoLocal.notas = notas;
+  localStorage.setItem(DB_KEYS.NOTAS, JSON.stringify(notas));
+  if (modoNubeActivo && dbFirebase) {
+    dbFirebase.ref('asistencia_db/notas').set(notas);
   }
 }
 
@@ -226,47 +246,79 @@ function mostrarDashboard() {
   document.getElementById('sidebarAvatar').textContent = usuarioActual.nombre_completo.charAt(0).toUpperCase();
 
   const hoyStr = new Date().toISOString().split('T')[0];
-  document.getElementById('fechaAsistencia').value = hoyStr;
-  document.getElementById('reporteFechaHasta').value = hoyStr;
+  const fechaAsist = document.getElementById('fechaAsistencia');
+  if(fechaAsist) fechaAsist.value = hoyStr;
+  
+  const repHasta = document.getElementById('reporteFechaHasta');
+  if(repHasta) repHasta.value = hoyStr;
 
   const mesAtras = new Date();
   mesAtras.setMonth(mesAtras.getMonth() - 1);
-  document.getElementById('reporteFechaDesde').value = mesAtras.toISOString().split('T')[0];
+  const repDesde = document.getElementById('reporteFechaDesde');
+  if(repDesde) repDesde.value = mesAtras.toISOString().split('T')[0];
 
-  cambiarModulo('asistencia');
+  cambiarModulo('inicio');
 }
 
-let moduloActual = 'asistencia';
+let moduloActual = 'inicio';
 
 function cambiarModulo(modulo) {
   moduloActual = modulo;
   document.querySelectorAll('.module-panel').forEach(p => p.style.display = 'none');
   document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
 
-  if (modulo === 'asistencia') {
+  if (modulo === 'inicio') {
+    document.getElementById('panelInicio').style.display = 'block';
+    const nav = document.getElementById('navInicio');
+    if(nav) nav.classList.add('active');
+    cargarDashboardInicio();
+  } else if (modulo === 'asistencia') {
     document.getElementById('panelAsistencia').style.display = 'block';
-    document.getElementById('navAsistencia').classList.add('active');
+    const nav = document.getElementById('navAsistencia');
+    if(nav) nav.classList.add('active');
     cargarCursosAsistencia();
   } else if (modulo === 'estudiantes') {
     document.getElementById('panelEstudiantes').style.display = 'block';
-    document.getElementById('navEstudiantes').classList.add('active');
+    const nav = document.getElementById('navEstudiantes');
+    if(nav) nav.classList.add('active');
     cargarCursosEstudiantes();
   } else if (modulo === 'reportes') {
     document.getElementById('panelReportes').style.display = 'block';
-    document.getElementById('navReportes').classList.add('active');
+    const nav = document.getElementById('navReportes');
+    if(nav) nav.classList.add('active');
     cargarCursosReportes();
     consultarReportes();
+  } else if (modulo === 'notas') {
+    document.getElementById('panelNotas').style.display = 'block';
+    const nav = document.getElementById('navNotas');
+    if(nav) nav.classList.add('active');
+    cargarCursosNotas();
+  } else if (modulo === 'perfil') {
+    document.getElementById('panelPerfil').style.display = 'block';
+    const nav = document.getElementById('navPerfil');
+    if(nav) nav.classList.add('active');
+    cargarPerfil();
+  } else if (modulo === 'contacto') {
+    document.getElementById('panelContacto').style.display = 'block';
+    const nav = document.getElementById('navContacto');
+    if(nav) nav.classList.add('active');
   }
 }
 
 function actualizarModuloActivo() {
-  if (moduloActual === 'asistencia') {
+  if (moduloActual === 'inicio') {
+    cargarDashboardInicio();
+  } else if (moduloActual === 'asistencia') {
     cargarCursosAsistencia();
   } else if (moduloActual === 'estudiantes') {
     cargarCursosEstudiantes();
   } else if (moduloActual === 'reportes') {
     cargarCursosReportes();
     consultarReportes();
+  } else if (moduloActual === 'notas') {
+    cargarCursosNotas();
+  } else if (moduloActual === 'perfil') {
+    cargarPerfil();
   }
 }
 
@@ -274,18 +326,18 @@ function actualizarModuloActivo() {
 // EVENTOS Y CONFIGURACIÓN
 // ==========================================================================
 function configurarEventos() {
-  document.getElementById('loginForm').addEventListener('submit', (e) => {
+  document.getElementById('loginForm')?.addEventListener('submit', (e) => {
     e.preventDefault();
     ejecutarLogin();
   });
 
-  document.getElementById('btnDemoFill').addEventListener('click', () => {
+  document.getElementById('btnDemoFill')?.addEventListener('click', () => {
     document.getElementById('loginUsuario').value = 'profesor1';
     document.getElementById('loginContrasena').value = '123456';
     document.getElementById('loginError').textContent = '';
   });
 
-  document.getElementById('btnLogout').addEventListener('click', () => {
+  document.getElementById('btnLogout')?.addEventListener('click', () => {
     if (confirm('¿Desea cerrar la sesión actual?')) {
       localStorage.removeItem(DB_KEYS.SESSION);
       usuarioActual = null;
@@ -294,32 +346,48 @@ function configurarEventos() {
     }
   });
 
-  document.getElementById('navAsistencia').addEventListener('click', () => cambiarModulo('asistencia'));
-  document.getElementById('navEstudiantes').addEventListener('click', () => cambiarModulo('estudiantes'));
-  document.getElementById('navReportes').addEventListener('click', () => cambiarModulo('reportes'));
+  document.getElementById('navInicio')?.addEventListener('click', () => cambiarModulo('inicio'));
+  document.getElementById('navAsistencia')?.addEventListener('click', () => cambiarModulo('asistencia'));
+  document.getElementById('navEstudiantes')?.addEventListener('click', () => cambiarModulo('estudiantes'));
+  document.getElementById('navReportes')?.addEventListener('click', () => cambiarModulo('reportes'));
+  document.getElementById('navNotas')?.addEventListener('click', () => cambiarModulo('notas'));
+  document.getElementById('navPerfil')?.addEventListener('click', () => cambiarModulo('perfil'));
+  document.getElementById('navContacto')?.addEventListener('click', () => cambiarModulo('contacto'));
 
-  document.getElementById('comboCursoAsistencia').addEventListener('change', cargarEstudiantesAsistencia);
-  document.getElementById('fechaAsistencia').addEventListener('change', cargarEstudiantesAsistencia);
-  document.getElementById('btnMarcarTodosPresentes').addEventListener('click', marcarTodosPresentes);
-  document.getElementById('btnGuardarAsistencia').addEventListener('click', guardarAsistencia);
+  document.getElementById('comboCursoAsistencia')?.addEventListener('change', cargarEstudiantesAsistencia);
+  document.getElementById('fechaAsistencia')?.addEventListener('change', cargarEstudiantesAsistencia);
+  document.getElementById('btnMarcarTodosPresentes')?.addEventListener('click', marcarTodosPresentes);
+  document.getElementById('btnGuardarAsistencia')?.addEventListener('click', guardarAsistencia);
 
-  document.getElementById('comboCursoEstudiantes').addEventListener('change', cargarTablaEstudiantes);
-  document.getElementById('btnModalNuevoCurso').addEventListener('click', () => abrirModal('modalNuevoCurso'));
-  document.getElementById('btnModalNuevoEstudiante').addEventListener('click', () => abrirModal('modalNuevoEstudiante'));
-  document.getElementById('formNuevoCurso').addEventListener('submit', guardarNuevoCurso);
-  document.getElementById('formNuevoEstudiante').addEventListener('submit', guardarNuevoEstudiante);
+  document.getElementById('comboCursoEstudiantes')?.addEventListener('change', cargarTablaEstudiantes);
+  document.getElementById('btnModalNuevoCurso')?.addEventListener('click', () => abrirModal('modalNuevoCurso'));
+  document.getElementById('btnModalNuevoEstudiante')?.addEventListener('click', () => abrirModal('modalNuevoEstudiante'));
+  document.getElementById('formNuevoCurso')?.addEventListener('submit', guardarNuevoCurso);
+  document.getElementById('formNuevoEstudiante')?.addEventListener('submit', guardarNuevoEstudiante);
 
-  document.getElementById('btnConsultarReporte').addEventListener('click', consultarReportes);
-  document.getElementById('btnExportarCSV').addEventListener('click', exportarReporteCSV);
+  document.getElementById('btnConsultarReporte')?.addEventListener('click', consultarReportes);
+  document.getElementById('btnExportarCSV')?.addEventListener('click', exportarReporteCSV);
+
+  // Notas
+  document.getElementById('comboCursoNotas')?.addEventListener('change', cargarTablaNotas);
+  document.getElementById('comboPeriodoNotas')?.addEventListener('change', cargarTablaNotas);
+  document.getElementById('btnGuardarNotas')?.addEventListener('click', guardarNotasModulo);
+  document.getElementById('btnExportarNotasCSV')?.addEventListener('click', exportarNotasCSV);
+  
+  // Contacto
+  document.getElementById('formContacto')?.addEventListener('submit', enviarFormularioContacto);
+
+  // Botón Toggle Sidebar (mobile)
+  document.getElementById('btnToggleSidebar')?.addEventListener('click', toggleSidebar);
 
   // Modal Nube
-  document.getElementById('btnAbrirConfigNube').addEventListener('click', () => {
+  document.getElementById('btnAbrirConfigNube')?.addEventListener('click', () => {
     const url = localStorage.getItem(DB_KEYS.FIREBASE_URL) || '';
     document.getElementById('inputDatabaseURL').value = url;
     abrirModal('modalConfigNube');
   });
 
-  document.getElementById('formConfigNube').addEventListener('submit', async (e) => {
+  document.getElementById('formConfigNube')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const url = document.getElementById('inputDatabaseURL').value.trim();
     if (url) {
@@ -330,7 +398,7 @@ function configurarEventos() {
     }
   });
 
-  document.getElementById('btnDesconectarNube').addEventListener('click', () => {
+  document.getElementById('btnDesconectarNube')?.addEventListener('click', () => {
     localStorage.removeItem(DB_KEYS.FIREBASE_URL);
     cerrarModales();
     showToast('Usando almacenamiento local (LocalStorage)');
@@ -340,6 +408,12 @@ function configurarEventos() {
   document.querySelectorAll('.btn-close-modal').forEach(btn => {
     btn.addEventListener('click', () => cerrarModales());
   });
+  
+  // Quick Actions en Inicio
+  document.getElementById('btnQuickAsistencia')?.addEventListener('click', () => cambiarModulo('asistencia'));
+  document.getElementById('btnQuickEstudiantes')?.addEventListener('click', () => cambiarModulo('estudiantes'));
+  document.getElementById('btnQuickNotas')?.addEventListener('click', () => cambiarModulo('notas'));
+  document.getElementById('btnQuickReportes')?.addEventListener('click', () => cambiarModulo('reportes'));
 }
 
 // ==========================================================================
@@ -368,10 +442,41 @@ function ejecutarLogin() {
 }
 
 // ==========================================================================
+// MÓDULO 0: INICIO (DASHBOARD)
+// ==========================================================================
+function cargarDashboardInicio() {
+  const cursos = estadoLocal.cursos.filter(c => c.id_profesor === usuarioActual.id_profesor);
+  const idsCursos = cursos.map(c => c.id_curso);
+  
+  const estudiantes = estadoLocal.estudiantes.filter(e => idsCursos.includes(e.id_curso) && e.activo === 1);
+  const asistencias = estadoLocal.asistencias.filter(a => idsCursos.includes(a.id_curso));
+  
+  const hoyStr = new Date().toISOString().split('T')[0];
+  const asistenciasHoy = asistencias.filter(a => a.fecha === hoyStr);
+  
+  let porcentajeAsistenciaHoy = 0;
+  if (asistenciasHoy.length > 0) {
+    const presentes = asistenciasHoy.filter(a => a.estado === 'PRESENTE').length;
+    porcentajeAsistenciaHoy = Math.round((presentes / asistenciasHoy.length) * 100);
+  }
+
+  const dashTotalEstudiantes = document.getElementById('dashTotalEstudiantes');
+  const dashTotalCursos = document.getElementById('dashTotalCursos');
+  const dashAsistenciaHoy = document.getElementById('dashAsistenciaHoy');
+  const dashTotalAsistencias = document.getElementById('dashTotalAsistencias');
+
+  if (dashTotalEstudiantes) dashTotalEstudiantes.textContent = estudiantes.length;
+  if (dashTotalCursos) dashTotalCursos.textContent = cursos.length;
+  if (dashAsistenciaHoy) dashAsistenciaHoy.textContent = porcentajeAsistenciaHoy + '%';
+  if (dashTotalAsistencias) dashTotalAsistencias.textContent = asistencias.length;
+}
+
+// ==========================================================================
 // MÓDULO 1: TOMAR ASISTENCIA
 // ==========================================================================
 function cargarCursosAsistencia() {
   const combo = document.getElementById('comboCursoAsistencia');
+  if(!combo) return;
   const valorActual = combo.value;
   combo.innerHTML = '';
 
@@ -398,9 +503,13 @@ function cargarCursosAsistencia() {
 }
 
 function cargarEstudiantesAsistencia() {
-  const idCurso = parseInt(document.getElementById('comboCursoAsistencia').value);
-  const fecha = document.getElementById('fechaAsistencia').value;
+  const combo = document.getElementById('comboCursoAsistencia');
+  const fechaInput = document.getElementById('fechaAsistencia');
   const tbody = document.getElementById('tbodyAsistencia');
+  if(!combo || !fechaInput || !tbody) return;
+
+  const idCurso = parseInt(combo.value);
+  const fecha = fechaInput.value;
   tbody.innerHTML = '';
 
   if (!idCurso || !fecha) return;
@@ -466,10 +575,15 @@ function recalcularMetricasAsistenciaEnVivo() {
 }
 
 function actualizarMetricasAsistencia(total, presentes, ausentes, otros) {
-  document.getElementById('metricTotalEstudiantes').textContent = total;
-  document.getElementById('metricPresentes').textContent = presentes;
-  document.getElementById('metricAusentes').textContent = ausentes;
-  document.getElementById('metricTardes').textContent = otros;
+  const metricTotalEstudiantes = document.getElementById('metricTotalEstudiantes');
+  const metricPresentes = document.getElementById('metricPresentes');
+  const metricAusentes = document.getElementById('metricAusentes');
+  const metricTardes = document.getElementById('metricTardes');
+  
+  if(metricTotalEstudiantes) metricTotalEstudiantes.textContent = total;
+  if(metricPresentes) metricPresentes.textContent = presentes;
+  if(metricAusentes) metricAusentes.textContent = ausentes;
+  if(metricTardes) metricTardes.textContent = otros;
 }
 
 function marcarTodosPresentes() {
@@ -524,6 +638,7 @@ function guardarAsistencia() {
 // ==========================================================================
 function cargarCursosEstudiantes() {
   const combo = document.getElementById('comboCursoEstudiantes');
+  if(!combo) return;
   const valorActual = combo.value;
   combo.innerHTML = '';
 
@@ -550,8 +665,10 @@ function cargarCursosEstudiantes() {
 }
 
 function cargarTablaEstudiantes() {
-  const idCurso = parseInt(document.getElementById('comboCursoEstudiantes').value);
+  const combo = document.getElementById('comboCursoEstudiantes');
   const tbody = document.getElementById('tbodyEstudiantes');
+  if(!combo || !tbody) return;
+  const idCurso = parseInt(combo.value);
   tbody.innerHTML = '';
 
   if (!idCurso) return;
@@ -670,6 +787,7 @@ function darDeBajaEstudiante(idEstudiante, nombre) {
 // ==========================================================================
 function cargarCursosReportes() {
   const combo = document.getElementById('comboCursoReportes');
+  if(!combo) return;
   const valorActual = combo.value;
   combo.innerHTML = '';
 
@@ -687,10 +805,15 @@ function cargarCursosReportes() {
 }
 
 function consultarReportes() {
-  const idCurso = parseInt(document.getElementById('comboCursoReportes').value);
-  const desde = document.getElementById('reporteFechaDesde').value;
-  const hasta = document.getElementById('reporteFechaHasta').value;
+  const combo = document.getElementById('comboCursoReportes');
+  const desdeInput = document.getElementById('reporteFechaDesde');
+  const hastaInput = document.getElementById('reporteFechaHasta');
   const tbody = document.getElementById('tbodyReportes');
+  if(!combo || !desdeInput || !hastaInput || !tbody) return;
+
+  const idCurso = parseInt(combo.value);
+  const desde = desdeInput.value;
+  const hasta = hastaInput.value;
   tbody.innerHTML = '';
 
   if (!idCurso || !desde || !hasta) return;
@@ -746,10 +869,15 @@ function consultarReportes() {
 }
 
 function actualizarMetricasReporte(total, presentes, ausentes, otros) {
-  document.getElementById('reporteTotalRegistros').textContent = total;
-  document.getElementById('reporteTotalPresentes').textContent = presentes;
-  document.getElementById('reporteTotalAusentes').textContent = ausentes;
-  document.getElementById('reporteTotalTardes').textContent = otros;
+  const reporteTotalRegistros = document.getElementById('reporteTotalRegistros');
+  const reporteTotalPresentes = document.getElementById('reporteTotalPresentes');
+  const reporteTotalAusentes = document.getElementById('reporteTotalAusentes');
+  const reporteTotalTardes = document.getElementById('reporteTotalTardes');
+
+  if(reporteTotalRegistros) reporteTotalRegistros.textContent = total;
+  if(reporteTotalPresentes) reporteTotalPresentes.textContent = presentes;
+  if(reporteTotalAusentes) reporteTotalAusentes.textContent = ausentes;
+  if(reporteTotalTardes) reporteTotalTardes.textContent = otros;
 }
 
 function exportarReporteCSV() {
@@ -796,10 +924,321 @@ function exportarReporteCSV() {
 }
 
 // ==========================================================================
+// MÓDULO 4: GESTIÓN DE NOTAS (NUEVO)
+// ==========================================================================
+function cargarCursosNotas() {
+  const combo = document.getElementById('comboCursoNotas');
+  if(!combo) return;
+  const valorActual = combo.value;
+  combo.innerHTML = '';
+
+  const cursos = estadoLocal.cursos.filter(c => c.id_profesor === usuarioActual.id_profesor);
+  if (cursos.length === 0) {
+    combo.innerHTML = '<option value="">Sin cursos asignados</option>';
+    document.getElementById('tbodyNotas').innerHTML = '<tr><td colspan="7">No tienes cursos creados.</td></tr>';
+    return;
+  }
+
+  cursos.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id_curso;
+    opt.textContent = `${c.nombre_curso} (${c.jornada})`;
+    combo.appendChild(opt);
+  });
+
+  if (valorActual && cursos.some(c => c.id_curso == valorActual)) {
+    combo.value = valorActual;
+  }
+
+  cargarTablaNotas();
+}
+
+function calcularPromedio(n1, n2, n3, n4) {
+  let notas = [parseFloat(n1), parseFloat(n2), parseFloat(n3), parseFloat(n4)];
+  let validNotas = notas.filter(n => !isNaN(n));
+  if (validNotas.length === 0) return 0;
+  let sum = validNotas.reduce((a, b) => a + b, 0);
+  return (sum / validNotas.length).toFixed(2);
+}
+
+function obtenerDesempeno(promedio) {
+  const prom = parseFloat(promedio);
+  if (isNaN(prom)) return { texto: '-', clase: '' };
+  if (prom >= 4.6) return { texto: 'SUPERIOR', clase: 'badge-presente' }; // Verde
+  if (prom >= 4.0) return { texto: 'ALTO', clase: 'badge-excusa' }; // Azul
+  if (prom >= 3.0) return { texto: 'BÁSICO', clase: 'badge-tarde' }; // Amarillo/Naranja
+  return { texto: 'BAJO', clase: 'badge-ausente' }; // Rojo
+}
+
+function cargarTablaNotas() {
+  const combo = document.getElementById('comboCursoNotas');
+  const comboPeriodo = document.getElementById('comboPeriodoNotas');
+  const tbody = document.getElementById('tbodyNotas');
+  if(!combo || !comboPeriodo || !tbody) return;
+
+  const idCurso = parseInt(combo.value);
+  const periodo = parseInt(comboPeriodo.value);
+  const year = new Date().getFullYear();
+  
+  tbody.innerHTML = '';
+
+  if (!idCurso) return;
+
+  const estudiantes = estadoLocal.estudiantes.filter(e => e.id_curso === idCurso && e.activo === 1);
+  const notasCurso = estadoLocal.notas.filter(n => n.id_curso === idCurso && n.periodo === periodo && n.year === year);
+
+  if (estudiantes.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="padding: 24px; color: var(--text-secondary);">No hay estudiantes matriculados en este curso.</td></tr>';
+    recalcularMetricasNotas([]);
+    return;
+  }
+
+  estudiantes.forEach(est => {
+    const prevNota = notasCurso.find(n => n.id_estudiante === est.id_estudiante) || {};
+    const n1 = prevNota.nota1 || '';
+    const n2 = prevNota.nota2 || '';
+    const n3 = prevNota.nota3 || '';
+    const n4 = prevNota.nota4 || '';
+    const prom = prevNota.promedio || '0.00';
+    const desem = obtenerDesempeno(prom);
+
+    const tr = document.createElement('tr');
+    tr.dataset.idEstudiante = est.id_estudiante;
+
+    tr.innerHTML = `
+      <td style="font-weight: 600;">${est.nombre_completo}</td>
+      <td><input type="number" step="0.1" min="1.0" max="5.0" class="form-input input-nota n1" value="${n1}" style="width: 70px;"></td>
+      <td><input type="number" step="0.1" min="1.0" max="5.0" class="form-input input-nota n2" value="${n2}" style="width: 70px;"></td>
+      <td><input type="number" step="0.1" min="1.0" max="5.0" class="form-input input-nota n3" value="${n3}" style="width: 70px;"></td>
+      <td><input type="number" step="0.1" min="1.0" max="5.0" class="form-input input-nota n4" value="${n4}" style="width: 70px;"></td>
+      <td class="promedio-td" style="font-weight:bold;">${prom}</td>
+      <td class="desempeno-td"><span class="badge ${desem.clase}">${desem.texto}</span></td>
+    `;
+    
+    tbody.appendChild(tr);
+  });
+
+  tbody.querySelectorAll('.input-nota').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const tr = e.target.closest('tr');
+      const n1 = tr.querySelector('.n1').value;
+      const n2 = tr.querySelector('.n2').value;
+      const n3 = tr.querySelector('.n3').value;
+      const n4 = tr.querySelector('.n4').value;
+      const promedio = calcularPromedio(n1, n2, n3, n4);
+      tr.querySelector('.promedio-td').textContent = promedio;
+      
+      const desem = obtenerDesempeno(promedio);
+      tr.querySelector('.desempeno-td').innerHTML = `<span class="badge ${desem.clase}">${desem.texto}</span>`;
+      
+      recalcularMetricasNotas();
+    });
+  });
+
+  recalcularMetricasNotas();
+}
+
+function recalcularMetricasNotas() {
+  const rows = document.querySelectorAll('#tbodyNotas tr');
+  if(rows.length === 0 || !rows[0].dataset.idEstudiante) {
+      actualizarMetricasNotasDOM(0, 0, 0, 0, 0);
+      return;
+  }
+  
+  let total = 0;
+  let sumPromedios = 0;
+  let sup = 0, alto = 0, basico = 0, bajo = 0;
+
+  rows.forEach(tr => {
+    const prom = parseFloat(tr.querySelector('.promedio-td').textContent);
+    if (!isNaN(prom) && prom > 0) {
+      total++;
+      sumPromedios += prom;
+      if (prom >= 4.6) sup++;
+      else if (prom >= 4.0) alto++;
+      else if (prom >= 3.0) basico++;
+      else bajo++;
+    }
+  });
+
+  const promGral = total > 0 ? (sumPromedios / total).toFixed(2) : '0.00';
+  actualizarMetricasNotasDOM(promGral, sup, alto, basico, bajo);
+}
+
+function actualizarMetricasNotasDOM(prom, sup, alto, basico, bajo) {
+  const mProm = document.getElementById('metricPromedioGeneral');
+  const mSup = document.getElementById('metricSuperior');
+  const mAlto = document.getElementById('metricAlto');
+  const mBasico = document.getElementById('metricBasico');
+  const mBajo = document.getElementById('metricBajo');
+  
+  if(mProm) mProm.textContent = prom;
+  if(mSup) mSup.textContent = sup;
+  if(mAlto) mAlto.textContent = alto;
+  if(mBasico) mBasico.textContent = basico;
+  if(mBajo) mBajo.textContent = bajo;
+}
+
+function guardarNotasModulo() {
+  const combo = document.getElementById('comboCursoNotas');
+  const comboPeriodo = document.getElementById('comboPeriodoNotas');
+  if(!combo || !comboPeriodo) return;
+
+  const idCurso = parseInt(combo.value);
+  const periodo = parseInt(comboPeriodo.value);
+  const year = new Date().getFullYear();
+
+  const rows = document.querySelectorAll('#tbodyNotas tr');
+  if (rows.length === 0 || !rows[0].dataset.idEstudiante) {
+    showToast('No hay notas para guardar', 'error');
+    return;
+  }
+
+  let notasData = [...estadoLocal.notas];
+  // Filter out current course, period, year to overwrite
+  notasData = notasData.filter(n => !(n.id_curso === idCurso && n.periodo === periodo && n.year === year));
+
+  let nextId = notasData.length > 0 ? Math.max(...notasData.map(n => n.id_nota || 0)) + 1 : 1;
+
+  rows.forEach(tr => {
+    const idEstudiante = parseInt(tr.dataset.idEstudiante);
+    if (!idEstudiante) return;
+
+    const n1 = tr.querySelector('.n1').value;
+    const n2 = tr.querySelector('.n2').value;
+    const n3 = tr.querySelector('.n3').value;
+    const n4 = tr.querySelector('.n4').value;
+    const prom = parseFloat(tr.querySelector('.promedio-td').textContent);
+
+    notasData.push({
+      id_nota: nextId++,
+      id_estudiante: idEstudiante,
+      id_curso: idCurso,
+      periodo: periodo,
+      year: year,
+      nota1: n1 ? parseFloat(n1) : null,
+      nota2: n2 ? parseFloat(n2) : null,
+      nota3: n3 ? parseFloat(n3) : null,
+      nota4: n4 ? parseFloat(n4) : null,
+      promedio: prom
+    });
+  });
+
+  guardarNotas(notasData);
+  showToast('¡Notas guardadas correctamente!');
+}
+
+function exportarNotasCSV() {
+  const idCurso = parseInt(document.getElementById('comboCursoNotas').value);
+  const periodo = parseInt(document.getElementById('comboPeriodoNotas').value);
+  const year = new Date().getFullYear();
+
+  const notasCurso = estadoLocal.notas.filter(n => n.id_curso === idCurso && n.periodo === periodo && n.year === year);
+
+  if (notasCurso.length === 0) {
+    showToast('No hay notas para exportar', 'error');
+    return;
+  }
+
+  const mapaEstudiantes = {};
+  estadoLocal.estudiantes.forEach(e => mapaEstudiantes[e.id_estudiante] = e.nombre_completo);
+
+  let csvContent = '\uFEFF';
+  csvContent += 'Estudiante,Nota 1,Nota 2,Nota 3,Nota 4,Promedio,Desempeno\n';
+
+  notasCurso.forEach(n => {
+    const nombre = mapaEstudiantes[n.id_estudiante] || 'Desconocido';
+    const desem = obtenerDesempeno(n.promedio);
+    const fila = [
+      `"${nombre}"`,
+      `"${n.nota1 || ''}"`,
+      `"${n.nota2 || ''}"`,
+      `"${n.nota3 || ''}"`,
+      `"${n.nota4 || ''}"`,
+      `"${n.promedio}"`,
+      `"${desem.texto}"`
+    ];
+    csvContent += fila.join(',') + '\n';
+  });
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `Notas_Curso_${idCurso}_Periodo_${periodo}_${year}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showToast('Notas CSV descargado con éxito');
+}
+
+// ==========================================================================
+// MÓDULO 5: PERFIL DEL PROFESOR
+// ==========================================================================
+function cargarPerfil() {
+  if(!usuarioActual) return;
+  const p = usuarioActual;
+  
+  const pNombre = document.getElementById('perfilNombre');
+  const pAvatar = document.getElementById('perfilAvatarTexto');
+  const pEmail = document.getElementById('perfilEmail');
+  const pTel = document.getElementById('perfilTelefono');
+  const pDepto = document.getElementById('perfilDepartamento');
+  const pEsp = document.getElementById('perfilEspecialidad');
+  const pTitulo = document.getElementById('perfilTitulo');
+  const pHorario = document.getElementById('perfilHorario');
+  const pBio = document.getElementById('perfilBio');
+
+  if(pNombre) pNombre.textContent = p.nombre_completo || 'No especificado';
+  if(pAvatar) pAvatar.textContent = (p.nombre_completo || 'P').charAt(0).toUpperCase();
+  if(pEmail) pEmail.textContent = p.correo || 'No especificado';
+  if(pTel) pTel.textContent = p.telefono || 'No especificado';
+  if(pDepto) pDepto.textContent = p.departamento || 'No especificado';
+  if(pEsp) pEsp.textContent = p.especialidad || 'No especificado';
+  if(pTitulo) pTitulo.textContent = p.titulo || 'No especificado';
+  if(pHorario) pHorario.textContent = p.horario || 'No especificado';
+  if(pBio) pBio.textContent = p.bio || 'No especificado';
+}
+
+// ==========================================================================
+// MÓDULO 6: CONTACTO
+// ==========================================================================
+function enviarFormularioContacto(e) {
+  e.preventDefault();
+  const form = document.getElementById('formContacto');
+  if(!form) return;
+
+  const nombre = document.getElementById('contactoNombre').value.trim();
+  const asunto = document.getElementById('contactoAsunto').value.trim();
+  const mensaje = document.getElementById('contactoMensaje').value.trim();
+
+  if(!nombre || !asunto || !mensaje) {
+    showToast('Por favor, complete todos los campos', 'error');
+    return;
+  }
+
+  const contactoMsg = {
+    fecha: new Date().toISOString(),
+    id_profesor: usuarioActual ? usuarioActual.id_profesor : null,
+    nombre: nombre,
+    asunto: asunto,
+    mensaje: mensaje
+  };
+
+  let mensajes = JSON.parse(localStorage.getItem('asistencia_contactos') || '[]');
+  mensajes.push(contactoMsg);
+  localStorage.setItem('asistencia_contactos', JSON.stringify(mensajes));
+
+  showToast('Mensaje enviado exitosamente');
+  form.reset();
+}
+
+// ==========================================================================
 // UTILIDADES Y MODALES
 // ==========================================================================
 function abrirModal(idModal) {
-  document.getElementById(idModal).classList.add('active');
+  const modal = document.getElementById(idModal);
+  if(modal) modal.classList.add('active');
 }
 
 function cerrarModales() {
@@ -817,6 +1256,7 @@ function formatearFecha(fechaISO) {
 
 function showToast(mensaje, tipo = 'success') {
   const container = document.getElementById('toastContainer');
+  if(!container) return;
   const toast = document.createElement('div');
   toast.className = `toast ${tipo}`;
   toast.textContent = mensaje;
@@ -827,4 +1267,19 @@ function showToast(mensaje, tipo = 'success') {
     toast.style.transition = 'opacity 0.3s';
     setTimeout(() => toast.remove(), 300);
   }, 3500);
+}
+
+function actualizarFechaHora() {
+  const headerTime = document.getElementById('headerDateTime');
+  if(headerTime) {
+    const ahora = new Date();
+    headerTime.textContent = ahora.toLocaleString();
+  }
+}
+
+function toggleSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  if(sidebar) {
+    sidebar.classList.toggle('active');
+  }
 }
